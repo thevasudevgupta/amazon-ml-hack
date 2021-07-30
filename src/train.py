@@ -9,7 +9,7 @@ from datasets import load_dataset
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer
 
-from data_utils import DataCollator, batchify
+from data_utils import DataCollator, batchify, build_or_load_vocab
 from modeling_utils import Classifier, ClassifierConfig
 from training_utils import (
     Trainer,
@@ -48,22 +48,6 @@ class TrainingArgs:
         os.makedirs(self.base_dir, exist_ok=True)
         self.save_dir = os.path.join(self.base_dir, self.save_dir)
         self.batch_size = self.batch_size_per_device * jax.device_count()
-
-
-def build_or_load_vocab(dataset, column_name="BROWSE_NODE_ID"):
-    if f"{column_name}.json" not in os.listdir("assets"):
-        print(f"building vocab from dataset[{column_name}]", end=" ... ")
-        ids = set()
-        for sample in tqdm(dataset):
-            ids.update(sample[column_name])
-        vocab = {id: i for i, id in enumerate(ids)}
-        with open(f"assets/{column_name}.json", "w") as f:
-            json.dump(vocab, f)
-        print("done!!")
-    else:
-        with open(f"assets/{column_name}.json") as f:
-            vocab = json.load(f)
-    return vocab
 
 
 def main(args, logger):
