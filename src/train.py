@@ -1,15 +1,16 @@
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict, replace
 from functools import partial
 
 import wandb
+import jax
 from datasets import load_dataset
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer
 
 from data_utils import DataCollator, batchify
-from modeling_utils import Classifier
+from modeling_utils import Classifier, ClassifierConfig
 from training_utils import (
     Trainer,
     build_tx,
@@ -19,6 +20,7 @@ from training_utils import (
     val_step,
 )
 
+IGNORE_IDX = -100
 
 @dataclass
 class TrainingArgs:
@@ -66,6 +68,8 @@ def build_or_load_vocab(dataset, column_name="BROWSE_NODE_ID"):
 
 def main(args, logger):
     data = load_dataset("csv", data_files=[args.data_files], split="train")
+    data = data.map(lambda x: {"BRAND": IGNORE_IDX if x["BRAND"] is None else x["BRAND"]})
+
     browse_node_vocab = build_or_load_vocab(data, column_name="BROWSE_NODE_ID")
     brand_vocab = build_or_load_vocab(data, column_name="BRAND")
 
@@ -76,11 +80,12 @@ def main(args, logger):
     tokenizer = AutoTokenizer.from_pretrained(args.base_model_id)
     data_collator = DataCollator(tokenizer=tokenizer, max_length=args.max_length)
 
-    model = Classifier(
+    config = ClassifierConfig(
         base_model_id=args.base_model_id,
         num_browse_nodes=len(browse_node_vocab),
         num_brands=len(brand_vocab),
     )
+    model = Classifier(config)
 
     trainer = Trainer(
         args=args,
@@ -88,7 +93,7 @@ def main(args, logger):
         batchify=partial(batchify, sep_token=tokenizer.sep_token),
         train_step_fn=train_step,
         val_step_fn=val_step,
-        loss_fn=cls_loss_fn,
+        loss_fn=partial(cls_loss_fn, ignore_idx=IGNORE_IDX),
         model_save_fn=model.save_pretrained,
         logger=logger,
         scheduler_fn=scheduler_fn,
@@ -111,5 +116,8 @@ def main(args, logger):
 
 if __name__ == "__main__":
     args = TrainingArgs()
-    logger = wandb.init()
+
+    logger = wandb.init(project="amazon-ml-hack", config=asdict(args))
+    args = replace(args, **dict(wandb.config))
+
     main(args, logger)

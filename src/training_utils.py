@@ -17,23 +17,25 @@ from flax.training import train_state
 from flax.training.common_utils import shard
 
 
-def cross_entropy(logits, labels):
+def cross_entropy(logits, labels, ignore_idx=-100):
     """
     Args:
-        logits: bsz, 1, vocab_size
-        labels: bsz, 1
+        logits: bsz, vocab_size
+        labels: bsz
     """
+    ignore_indices = labels != ignore_idx
+
     vocab_size = logits.shape[-1]
     labels = (labels[..., None] == jnp.arange(vocab_size)[None]).astype("f4")
     logits = jax.nn.log_softmax(logits, axis=-1)
     loss = -jnp.sum(labels * logits, axis=-1)
-    return jnp.mean(loss)
+    return jnp.mean(loss[ignore_indices])
 
 
-def cls_loss_fn(browse_node_logits, browse_nodes, brand_logits=None, brands=None):
-    loss = cross_entropy(browse_node_logits, browse_nodes)
+def cls_loss_fn(browse_node_logits, browse_nodes, brand_logits=None, brands=None, ignore_idx=-100):
+    loss = cross_entropy(browse_node_logits, browse_nodes, ignore_idx=ignore_idx)
     if brand_logits is not None and brands is not None:
-        loss = (loss + cross_entropy(brand_logits, brands)) / 2
+        loss = (loss + cross_entropy(brand_logits, brands, ignore_idx=ignore_idx)) / 2
     return loss
 
 
