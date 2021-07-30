@@ -23,13 +23,14 @@ def cross_entropy(logits, labels, ignore_idx=-100):
         logits: bsz, vocab_size
         labels: bsz
     """
-    ignore_indices = labels != ignore_idx
+    indices_to_consider = labels != ignore_idx
 
     vocab_size = logits.shape[-1]
     labels = (labels[..., None] == jnp.arange(vocab_size)[None]).astype("f4")
     logits = jax.nn.log_softmax(logits, axis=-1)
     loss = -jnp.sum(labels * logits, axis=-1)
-    return jnp.mean(loss[ignore_indices])
+    loss = jnp.take(loss, indices_to_consider)
+    return jnp.mean(loss)
 
 
 def cls_loss_fn(browse_node_logits, browse_nodes, brand_logits=None, brands=None, ignore_idx=-100):
@@ -40,7 +41,7 @@ def cls_loss_fn(browse_node_logits, browse_nodes, brand_logits=None, brands=None
 
 
 @partial(jax.pmap, axis_name="batch")
-def train_step(state, drp_rng, **model_inputs):
+def train_step(state, drp_rng, model_inputs):
     def loss_fn(params):
         browse_nodes = model_inputs.pop("browse_nodes")
         brands = model_inputs.pop("brands", None)
@@ -145,26 +146,26 @@ class Trainer:
                 tr_dataloader, total=total, desc=f"Running EPOCH-{epoch}"
             ):
                 batch = shard(self.data_collator(batch))
-                state, metrics, drp_rng = self.train_step_fn(state, drp_rng, **batch)
-                running_loss += jax_utils.unreplicate(metrics["loss"])
-                i += 1
-                if i % args.logging_steps == 0:
-                    state_step = jax_utils.unreplicate(state.step)
-                    tr_loss = running_loss.item() / i
-                    lr = self.scheduler_fn(state_step - 1)
+                state, metrics, drp_rng = self.train_step_fn(state, drp_rng, batch)
+                # running_loss += jax_utils.unreplicate(metrics["loss"])
+                # i += 1
+                # if i % args.logging_steps == 0:
+                #     state_step = jax_utils.unreplicate(state.step)
+                #     tr_loss = running_loss.item() / i
+                #     lr = self.scheduler_fn(state_step - 1)
 
-                    eval_loss = self.evaluate(state, val_dataset)
-                    logging_dict = dict(
-                        step=state_step.item(),
-                        eval_loss=eval_loss.item(),
-                        tr_loss=tr_loss,
-                        lr=lr.item(),
-                    )
-                    tqdm.write(str(logging_dict))
-                    self.logger.log(logging_dict, commit=True)
+                #     eval_loss = self.evaluate(state, val_dataset)
+                #     logging_dict = dict(
+                #         step=state_step.item(),
+                #         eval_loss=eval_loss.item(),
+                #         tr_loss=tr_loss,
+                #         lr=lr.item(),
+                #     )
+                #     tqdm.write(str(logging_dict))
+                #     self.logger.log(logging_dict, commit=True)
 
-                if i % args.save_steps == 0:
-                    self.save_checkpoint(args.save_dir + f"-e{epoch}-s{i}", state=state)
+                # if i % args.save_steps == 0:
+                #     self.save_checkpoint(args.save_dir + f"-e{epoch}-s{i}", state=state)
 
     def evaluate(self, state, dataset):
         dataloader = self.batchify(dataset, self.args.batch_size)

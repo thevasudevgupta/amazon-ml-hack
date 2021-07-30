@@ -12,7 +12,7 @@ from data_utils import build_or_load_vocab, preprocess
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_id", type=str)
-    parser.add_argument("--data_files", default="dataset/test-v2.csv", type=str)
+    parser.add_argument("--data_files", default="../dataset/test-v2.csv", type=str)
     return parser
 
 
