@@ -23,21 +23,21 @@ IGNORE_IDX = -100
 @dataclass
 class TrainingArgs:
     base_model_id: str = "bert-base-uncased"
-    logging_steps: int = 100
-    save_steps: int = 100
+    logging_steps: int = 564
+    save_steps: int = 1880
 
-    batch_size_per_device: int = 16
+    batch_size_per_device: int = 64
     max_epochs: int = 5
+
     seed: int = 42
     val_split: float = 0.005
-
     max_length: int = 128
 
     # tx_args
-    lr: float = 5e-5
+    lr: float = 1e-4
     init_lr: float = 0.0
-    warmup_steps: int = 2000
-    weight_decay: float = 0.0001
+    warmup_steps: int = 5640
+    weight_decay: float = 0.001
 
     base_dir: str = "training-expt"
     save_dir: str = "checkpoints"
