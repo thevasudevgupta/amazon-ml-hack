@@ -11,12 +11,12 @@ from tqdm.auto import tqdm
 import jax
 import jax.numpy as jnp
 import optax
-import numpy as np
 from flax import jax_utils, struct, traverse_util
 from flax.serialization import from_bytes, to_bytes
 from flax.training import train_state
 from flax.training.common_utils import shard
 
+from data_utils import get_noisy_sent
 
 def cross_entropy(logits, labels, ignore_idx=-100):
     """
@@ -134,7 +134,7 @@ class Trainer:
             model.params = params
         return jax_utils.replicate(state)
 
-    def train(self, state, tr_dataset, val_dataset):
+    def train(self, state, tr_dataset, val_dataset, apply_data_augment=False):
         args = self.args
         total = len(tr_dataset) // args.batch_size
 
@@ -142,6 +142,11 @@ class Trainer:
         drp_rng = jax.random.split(rng, jax.device_count())
         for epoch in range(args.max_epochs):
             running_loss = jnp.array(0, dtype=jnp.float32)
+
+            if apply_data_augment:
+                print(tr_dataset[0]["inputs"])
+                tr_dataset = tr_dataset.map(lambda x: {"inputs": get_noisy_sent(x["inputs"].split())}, load_from_cache_file=False)
+                print(tr_dataset[0]["inputs"])
             tr_dataloader = self.batchify(tr_dataset, args.batch_size, seed=epoch)
             i = 0
             for batch in tqdm(

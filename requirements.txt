@@ -2,3 +2,4 @@ flax
 datasets
 transformers
 wandb
+nltk

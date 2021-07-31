@@ -2,10 +2,14 @@ from dataclasses import dataclass
 from transformers import PreTrainedTokenizerBase
 
 import os
+import random
 import jax.numpy as jnp
 from tqdm.auto import tqdm
 import json
 
+from nltk.corpus import wordnet, stopwords
+
+STOP_WORDS = stop_words = set(stopwords.words('english'))
 
 @dataclass
 class DataCollator:
@@ -74,3 +78,29 @@ def build_or_load_vocab(dataset=None, column_name="BROWSE_NODE_ID"):
         with open(f"../assets/{column_name}.json") as f:
             vocab = json.load(f)
     return vocab
+
+
+def get_noisy_sent(word_list, v=1):
+
+    def get_synonyms(word):
+        synonyms = set()
+        for syn in wordnet.synsets(word):
+            for l in syn.lemmas():
+                synonym = l.name().replace("_", " ").replace("-", " ").lower()
+                synonym = "".join([char for char in synonym if char in " qwertyuiopasdfghjklzxcvbnm"])
+                synonyms.add(synonym)
+        if word in synonyms:
+            synonyms.remove(word)
+        return list(synonyms)
+
+    n = int(v*len(word_list))
+    not_stopwords = list(set([word for word in word_list if word not in STOP_WORDS]))
+    rand_word_list = random.choices(not_stopwords, k=min(n, len(not_stopwords)))
+
+    for word in rand_word_list:
+        synonyms = get_synonyms(word)
+        if len(synonyms) >= 1:
+            synonym = random.choice(synonyms)
+            word_list = [synonym if w == word else w for w in word_list]
+
+    return ' '.join(word_list)

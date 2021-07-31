@@ -34,6 +34,8 @@ class TrainingArgs:
     val_split: float = 0.005
     max_length: int = 160
 
+    apply_data_augment: bool = True
+
     # tx_args
     lr: float = 1e-4
     init_lr: float = 0.0
@@ -112,7 +114,7 @@ def main(args, logger):
     state = trainer.create_state(model, tx, num_train_steps, ckpt_dir=None)
 
     try:
-        trainer.train(state, data["train"], data["test"])
+        trainer.train(state, data["train"], data["test"], apply_data_augment=args.apply_data_augment)
     except KeyboardInterrupt:
         print("Interrupting training from KEYBOARD")
 
