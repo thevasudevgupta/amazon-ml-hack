@@ -27,7 +27,7 @@ class TrainingArgs:
     logging_steps: int = 564
     save_steps: int = 1880
 
-    batch_size_per_device: int = 64
+    batch_size_per_device: int = 32
     max_epochs: int = 5
 
     seed: int = 42
@@ -58,12 +58,12 @@ def main(args, logger):
     brand_vocab = build_or_load_vocab(data, column_name="BRAND")
     print("VOCAB SIZE: ", len(browse_node_vocab), len(brand_vocab))
 
-    # data = data.select(range(1010))
+    # data = data.select(range(100))
 
     tokenizer = AutoTokenizer.from_pretrained(args.base_model_id)
 
     data = data.map(lambda x: {"BRAND": IGNORE_IDX if x["BRAND"] is None else brand_vocab[x["BRAND"]]})
-    data = data.map(lambda x: {"BROWSE_NODE_ID": browse_node_vocab[x["BROWSE_NODE_ID"]]})
+    data = data.map(lambda x: {"BROWSE_NODE_ID": browse_node_vocab[str(x["BROWSE_NODE_ID"])]})
     data = preprocess(data, tokenizer.sep_token)
 
     data = data.map(lambda x: {"len_inputs": len(x["inputs"]) // 4})
@@ -88,8 +88,9 @@ def main(args, logger):
         args.lr, args.init_lr, args.warmup_steps, num_train_steps, args.weight_decay
     )
 
-    prediction_fn = partial(predict,
-        forward_fn=jax.jit(model.__call__),
+    prediction_fn = lambda inputs: predict(
+        inputs,
+        forward_fn=jax.jit(model),
         to_browse_node={v: k for k, v in browse_node_vocab.items()},
         tokenizer=tokenizer,
         max_length=args.max_length,

@@ -157,9 +157,9 @@ class Trainer:
                     lr = self.scheduler_fn(state_step - 1)
 
                     eval_loss = self.evaluate(state, val_dataset)
-                    
+
                     samples = val_dataset.map(self.prediction_fn)
-                    accuracy = samples["IS_CORRECT"] / len(samples)
+                    accuracy = np.mean(samples["IS_CORRECT"])
 
                     logging_dict = dict(
                         step=state_step.item(),
@@ -250,12 +250,14 @@ def build_tx(lr, init_lr, warmup_steps, num_train_steps, weight_decay):
 
 
 def predict(inputs, forward_fn, to_browse_node, tokenizer, max_length=256):
-    inputs = tokenizer(inputs["inputs"], return_tensors="jax", max_length=max_length, truncation=True, padding="max_length")
-    logits = forward_fn(inputs["input_ids"], inputs["attention_mask"])
-
+    outputs = tokenizer(inputs["inputs"], return_tensors="jax", max_length=max_length, truncation=True, padding="max_length")
+    logits = forward_fn(outputs["input_ids"], outputs["attention_mask"])
     category = jnp.argmax(logits[0], axis=-1).item()
-    inputs["PREDICTION"] = int(to_browse_node[category])
+
+    assert category < len(to_browse_node) and inputs["BROWSE_NODE_ID"] < len(to_browse_node)
 
     if "BROWSE_NODE_ID" in inputs:
         inputs["IS_CORRECT"] = int(category == inputs["BROWSE_NODE_ID"])
+
+    inputs["PREDICTION"] = int(to_browse_node[category])
     return inputs
