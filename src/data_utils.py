@@ -10,7 +10,7 @@ import json
 @dataclass
 class DataCollator:
     tokenizer: PreTrainedTokenizerBase
-    max_length: int = 512
+    max_length: int = 128
 
     def __call__(self, batch):
         return self.collate_fn(batch)
@@ -28,12 +28,11 @@ class DataCollator:
             "input_ids": inputs["input_ids"],
             "attention_mask": inputs["attention_mask"],
             "browse_nodes": jnp.array(features["BROWSE_NODE_ID"], dtype=jnp.int32),
-            "brands": jnp.array(features["BRAND"], dtype=jnp.int32),
+            # "brands": jnp.array(features["BRAND"], dtype=jnp.int32),
         }
 
 
 def batchify(dataset, batch_size, seed=None):
-    # TODO: understand why we can't put preprocess here
     if seed is not None:
         dataset = dataset.shuffle(seed=seed)
     # extra samples will be dropped

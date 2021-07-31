@@ -147,25 +147,25 @@ class Trainer:
             ):
                 batch = shard(self.data_collator(batch))
                 state, metrics, drp_rng = self.train_step_fn(state, drp_rng, batch)
-                # running_loss += jax_utils.unreplicate(metrics["loss"])
-                # i += 1
-                # if i % args.logging_steps == 0:
-                #     state_step = jax_utils.unreplicate(state.step)
-                #     tr_loss = running_loss.item() / i
-                #     lr = self.scheduler_fn(state_step - 1)
+                running_loss += jax_utils.unreplicate(metrics["loss"])
+                i += 1
+                if i % args.logging_steps == 0:
+                    state_step = jax_utils.unreplicate(state.step)
+                    tr_loss = running_loss.item() / i
+                    lr = self.scheduler_fn(state_step - 1)
 
-                #     eval_loss = self.evaluate(state, val_dataset)
-                #     logging_dict = dict(
-                #         step=state_step.item(),
-                #         eval_loss=eval_loss.item(),
-                #         tr_loss=tr_loss,
-                #         lr=lr.item(),
-                #     )
-                #     tqdm.write(str(logging_dict))
-                #     self.logger.log(logging_dict, commit=True)
+                    eval_loss = self.evaluate(state, val_dataset)
+                    logging_dict = dict(
+                        step=state_step.item(),
+                        eval_loss=eval_loss.item(),
+                        tr_loss=tr_loss,
+                        lr=lr.item(),
+                    )
+                    tqdm.write(str(logging_dict))
+                    self.logger.log(logging_dict, commit=True)
 
-                # if i % args.save_steps == 0:
-                #     self.save_checkpoint(args.save_dir + f"-e{epoch}-s{i}", state=state)
+                if i % args.save_steps == 0:
+                    self.save_checkpoint(args.save_dir + f"-e{epoch}-s{i}", state=state)
 
     def evaluate(self, state, dataset):
         dataloader = self.batchify(dataset, self.args.batch_size)

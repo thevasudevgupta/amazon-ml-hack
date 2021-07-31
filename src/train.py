@@ -1,10 +1,10 @@
-import json
 import os
 from dataclasses import dataclass, asdict, replace
 from functools import partial
 
 import wandb
 import jax
+import numpy as np
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
@@ -23,21 +23,21 @@ IGNORE_IDX = -100
 @dataclass
 class TrainingArgs:
     base_model_id: str = "bert-base-uncased"
-    logging_steps: int = 3000
-    save_steps: int = 10500
+    logging_steps: int = 100
+    save_steps: int = 100
 
-    batch_size_per_device: int = 1
-    max_epochs: int = 2
+    batch_size_per_device: int = 16
+    max_epochs: int = 5
     seed: int = 42
-    val_split: float = 0.05
+    val_split: float = 0.005
 
-    max_length: int = 4
+    max_length: int = 128
 
     # tx_args
-    lr: float = 3e-5
+    lr: float = 5e-5
     init_lr: float = 0.0
-    warmup_steps: int = 20000
-    weight_decay: float = 0.0095
+    warmup_steps: int = 2000
+    weight_decay: float = 0.0001
 
     base_dir: str = "training-expt"
     save_dir: str = "checkpoints"
@@ -52,31 +52,36 @@ class TrainingArgs:
 
 def main(args, logger):
     data = load_dataset("csv", data_files=[args.data_files], split="train")
-    print("Samples: ", data[0], "\n", data[1])
-
-    data = data.select(range(1010))
 
     browse_node_vocab = build_or_load_vocab(data, column_name="BROWSE_NODE_ID")
     brand_vocab = build_or_load_vocab(data, column_name="BRAND")
     print("VOCAB SIZE: ", len(browse_node_vocab), len(brand_vocab))
 
+    # data = data.select(range(1010))
+
     tokenizer = AutoTokenizer.from_pretrained(args.base_model_id)
 
     data = data.map(lambda x: {"BRAND": IGNORE_IDX if x["BRAND"] is None else brand_vocab[x["BRAND"]]})
     data = preprocess(data, tokenizer.sep_token)
+
+    data = data.map(lambda x: {"len_inputs": len(x["inputs"]) // 4})
+    print("data stats:", {
+        "max": np.max(data["len_inputs"]),
+        "mean": np.mean(data["len_inputs"]),
+        "min": np.min(data["len_inputs"]),
+    })
+
     data = data.train_test_split(args.val_split, seed=args.seed)
     print(data)
-    tr_data, val_data = data["train"], data["test"]
 
     data_collator = DataCollator(tokenizer=tokenizer, max_length=args.max_length)
-
     model = Classifier.from_pretrained(
         args.base_model_id,
         num_browse_nodes=len(browse_node_vocab),
-        num_brands=len(brand_vocab),
+        # num_brands=len(brand_vocab),
     )
 
-    num_train_steps = (len(tr_data) // args.batch_size) * args.max_epochs
+    num_train_steps = (len(data["train"]) // args.batch_size) * args.max_epochs
     tx, scheduler = build_tx(
         args.lr, args.init_lr, args.warmup_steps, num_train_steps, args.weight_decay
     )
@@ -96,7 +101,7 @@ def main(args, logger):
     state = trainer.create_state(model, tx, num_train_steps, ckpt_dir=None)
 
     try:
-        trainer.train(state, tr_data, val_data)
+        trainer.train(state, data["train"], data["test"])
     except KeyboardInterrupt:
         print("Interrupting training from KEYBOARD")
 
@@ -109,6 +114,7 @@ if __name__ == "__main__":
 
     print("##########################")
     print("DEVICES:", jax.devices())
+    print("Training with global batch size of", args.batch_size)
     print("##########################")
 
     logger = wandb.init(project="amazon-ml-hack", config=asdict(args))
