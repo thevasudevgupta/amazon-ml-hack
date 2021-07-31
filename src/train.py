@@ -23,7 +23,7 @@ IGNORE_IDX = -100
 
 @dataclass
 class TrainingArgs:
-    base_model_id: str = "bert-base-uncased"
+    base_model_id: str = "bert-large-uncased"
     logging_steps: int = 564
     save_steps: int = 1880
 
@@ -32,7 +32,7 @@ class TrainingArgs:
 
     seed: int = 42
     val_split: float = 0.005
-    max_length: int = 256
+    max_length: int = 160
 
     # tx_args
     lr: float = 1e-4

@@ -158,15 +158,15 @@ class Trainer:
 
                     eval_loss = self.evaluate(state, val_dataset)
 
-                    samples = val_dataset.map(self.prediction_fn)
-                    accuracy = np.mean(samples["IS_CORRECT"])
+#                    samples = val_dataset.map(self.prediction_fn)
+#                    accuracy = np.mean(samples["IS_CORRECT"])
 
                     logging_dict = dict(
                         step=state_step.item(),
                         eval_loss=eval_loss.item(),
                         tr_loss=tr_loss,
                         lr=lr.item(),
-                        val_accuracy=accuracy,
+#                        val_accuracy=accuracy,
                     )
                     tqdm.write(str(logging_dict))
                     self.logger.log(logging_dict, commit=True)
