@@ -16,6 +16,7 @@ from training_utils import (
     cls_loss_fn,
     train_step,
     val_step,
+    predict,
 )
 
 IGNORE_IDX = -100
@@ -31,7 +32,7 @@ class TrainingArgs:
 
     seed: int = 42
     val_split: float = 0.005
-    max_length: int = 128
+    max_length: int = 256
 
     # tx_args
     lr: float = 1e-4
@@ -62,6 +63,7 @@ def main(args, logger):
     tokenizer = AutoTokenizer.from_pretrained(args.base_model_id)
 
     data = data.map(lambda x: {"BRAND": IGNORE_IDX if x["BRAND"] is None else brand_vocab[x["BRAND"]]})
+    data = data.map(lambda x: {"BROWSE_NODE_ID": browse_node_vocab[x["BROWSE_NODE_ID"]]})
     data = preprocess(data, tokenizer.sep_token)
 
     data = data.map(lambda x: {"len_inputs": len(x["inputs"]) // 4})
@@ -86,12 +88,20 @@ def main(args, logger):
         args.lr, args.init_lr, args.warmup_steps, num_train_steps, args.weight_decay
     )
 
+    prediction_fn = partial(predict,
+        forward_fn=jax.jit(model.__call__),
+        to_browse_node={v: k for k, v in browse_node_vocab.items()},
+        tokenizer=tokenizer,
+        max_length=args.max_length,
+    )
+
     trainer = Trainer(
         args=args,
         data_collator=data_collator,
         batchify=batchify,
         train_step_fn=train_step,
         val_step_fn=val_step,
+        prediction_fn=prediction_fn,
         loss_fn=partial(cls_loss_fn, ignore_idx=IGNORE_IDX),
         model_save_fn=model.save_pretrained,
         logger=logger,
