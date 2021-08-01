@@ -49,7 +49,8 @@ def _forward(input_ids, attention_mask):
 def _predict(inputs, idx):
     outputs = tokenizer(inputs["inputs"], return_tensors="jax", max_length=512, truncation=True, padding="max_length")
     category = _forward(outputs["input_ids"], outputs["attention_mask"])
-    inputs["BROWSE_NODE_ID"] = int(category.item())
+    category = [to_browse_node[c] for c in np.array(category).tolist()]
+    inputs["BROWSE_NODE_ID"] = int(category[0])
     return inputs
 
 
