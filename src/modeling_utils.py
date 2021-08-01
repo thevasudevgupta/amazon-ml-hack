@@ -18,15 +18,17 @@ class ClassifierModule(FlaxBertModule):
         if self.num_brands is not None:
             self.cls2 = nn.Dense(self.num_brands, dtype=self.dtype)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, mix_rng=None, **kwargs):
         cls_logits = super().__call__(*args, **kwargs)[1]
-        rng = jax.random.PRNGKey(0)
-        cls_logits = self.lambd * cls_logits + (1 - self.lambd) * jax.random.permutation(rng, cls_logits, axis=0)
+        if mix_rng is not None:
+            cls_logits = self.lambd * cls_logits + (1 - self.lambd) * jax.random.permutation(mix_rng, cls_logits)
         browse_node_logits = self.cls1(cls_logits)
-        browse_node_logits = self.lambd * browse_node_logits + (1 - self.lambd) * jax.random.permutation(rng, browse_node_logits, axis=0)
+        if mix_rng is not None:
+            browse_node_logits = self.lambd * browse_node_logits + (1 - self.lambd) * jax.random.permutation(mix_rng, browse_node_logits)
         brand_logits = self.cls2(cls_logits) if self.num_brands is not None else None
         return browse_node_logits, brand_logits
 
 
 class Classifier(FlaxBertModel):
     module_class = ClassifierModule
+

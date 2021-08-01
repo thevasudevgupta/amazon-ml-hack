@@ -35,10 +35,10 @@ class TrainingArgs:
     max_length: int = 160
 
     apply_data_augment: bool = False
-    lambd: float = 0.9
+    lambd: float = 1
 
     # tx_args
-    lr: float = 1e-4
+    lr: float = 2e-4
     init_lr: float = 0.0
     warmup_steps: int = 5640
     weight_decay: float = 0.001
@@ -61,7 +61,7 @@ def main(args, logger):
     brand_vocab = build_or_load_vocab(data, column_name="BRAND")
     print("VOCAB SIZE: ", len(browse_node_vocab), len(brand_vocab))
 
-    data = data.select(range(300000))
+    # data = data.select(range(300000))
 
     tokenizer = AutoTokenizer.from_pretrained(args.base_model_id)
 
