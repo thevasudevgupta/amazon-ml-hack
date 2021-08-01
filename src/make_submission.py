@@ -1,8 +1,8 @@
 import nltk
 
 try:
-    nltk.download('stopwords')
-    nltk.download('wordnet')
+    nltk.download("stopwords")
+    nltk.download("wordnet")
 except:
     print("Couldn't download stopwords or wordnet")
 
@@ -12,14 +12,13 @@ import os
 import jax
 import jax.numpy as jnp
 import numpy as np
-
-from datasets import load_dataset
-from transformers import BertTokenizerFast
 import pandas as pd
+from datasets import load_dataset
 from tqdm.auto import tqdm
+from transformers import BertTokenizerFast
 
-from modeling_utils import Classifier
 from data_utils import build_or_load_vocab, preprocess
+from modeling_utils import Classifier
 
 # pass path to test data here
 DATA_FILES = "../dataset/test-v2.csv"
@@ -47,7 +46,13 @@ def _forward(input_ids, attention_mask):
 
 
 def _predict(inputs, idx):
-    outputs = tokenizer(inputs["inputs"], return_tensors="jax", max_length=512, truncation=True, padding="max_length")
+    outputs = tokenizer(
+        inputs["inputs"],
+        return_tensors="jax",
+        max_length=512,
+        truncation=True,
+        padding="max_length",
+    )
     category = _forward(outputs["input_ids"], outputs["attention_mask"])
     category = [to_browse_node[c] for c in np.array(category).tolist()]
     inputs["BROWSE_NODE_ID"] = int(category[0])
@@ -61,7 +66,13 @@ def _random_forward(input_ids, attention_mask, rng):
 
 
 def _random_predict(inputs, idx):
-    outputs = tokenizer(inputs["inputs"], return_tensors="jax", max_length=512, truncation=True, padding="max_length")
+    outputs = tokenizer(
+        inputs["inputs"],
+        return_tensors="jax",
+        max_length=512,
+        truncation=True,
+        padding="max_length",
+    )
     rng = jax.random.PRNGKey(idx)
     category = _random_forward(outputs["input_ids"], outputs["attention_mask"], rng)
     inputs["BROWSE_NODE_ID"] = int(category.item())
@@ -80,17 +91,24 @@ if __name__ == "__main__":
 
     data = data.map(_mapping_fn, fn_kwargs={"sep_token": tokenizer.sep_token})
     data = data.map(lambda x: {"len_inputs": len(x["inputs"]) // 4})
-    print("data stats:", {
-        "max": np.max(data["len_inputs"]),
-        "mean": np.mean(data["len_inputs"]),
-        "min": np.min(data["len_inputs"]),
-    })
+    print(
+        "data stats:",
+        {
+            "max": np.max(data["len_inputs"]),
+            "mean": np.mean(data["len_inputs"]),
+            "min": np.min(data["len_inputs"]),
+        },
+    )
 
-    model = Classifier.from_pretrained(MODEL_ID, num_browse_nodes=len(browse_node_vocab))
+    model = Classifier.from_pretrained(
+        MODEL_ID, num_browse_nodes=len(browse_node_vocab)
+    )
 
     # replace _predict with _random_predict if want to use jax.random.categorical
     data = data.map(_predict, with_indices=True)
-    data = data.remove_columns(['TITLE', 'DESCRIPTION', 'BULLET_POINTS', 'BRAND', 'inputs', 'len_inputs'])
+    data = data.remove_columns(
+        ["TITLE", "DESCRIPTION", "BULLET_POINTS", "BRAND", "inputs", "len_inputs"]
+    )
     print(data)
 
     print("saving `submission.csv`")

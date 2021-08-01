@@ -4,17 +4,17 @@ from dataclasses import dataclass
 from functools import partial
 from typing import Callable
 
-import joblib
-import wandb
-from tqdm.auto import tqdm
-
 import jax
 import jax.numpy as jnp
+import joblib
 import optax
 from flax import jax_utils, struct, traverse_util
 from flax.serialization import from_bytes, to_bytes
 from flax.training import train_state
 from flax.training.common_utils import shard
+from tqdm.auto import tqdm
+
+import wandb
 
 
 def cross_entropy(logits, labels, ignore_idx=-100):
@@ -33,7 +33,9 @@ def cross_entropy(logits, labels, ignore_idx=-100):
     return jnp.mean(loss)
 
 
-def cls_loss_fn(browse_node_logits, browse_nodes, brand_logits=None, brands=None, ignore_idx=-100):
+def cls_loss_fn(
+    browse_node_logits, browse_nodes, brand_logits=None, brands=None, ignore_idx=-100
+):
     loss = cross_entropy(browse_node_logits, browse_nodes, ignore_idx=ignore_idx)
     if brand_logits is not None and brands is not None:
         loss = (loss + cross_entropy(brand_logits, brands, ignore_idx=ignore_idx)) / 2
@@ -143,7 +145,10 @@ class Trainer:
 
             if apply_data_augment:
                 print(tr_dataset[0]["inputs"])
-                tr_dataset = tr_dataset.map(lambda x: {"inputs": get_noisy_sent(x["inputs"].split())}, load_from_cache_file=False)
+                tr_dataset = tr_dataset.map(
+                    lambda x: {"inputs": get_noisy_sent(x["inputs"].split())},
+                    load_from_cache_file=False,
+                )
                 print(tr_dataset[0]["inputs"])
             tr_dataloader = self.batchify(tr_dataset, args.batch_size, seed=epoch)
             i = 0

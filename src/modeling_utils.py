@@ -1,10 +1,9 @@
-from transformers import FlaxBertModel
-from transformers.models.bert.modeling_flax_bert import FlaxBertModule
-
 from typing import Optional
 
-import jax
 import flax.linen as nn
+import jax
+from transformers import FlaxBertModel
+from transformers.models.bert.modeling_flax_bert import FlaxBertModule
 
 
 class ClassifierModule(FlaxBertModule):
