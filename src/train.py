@@ -35,6 +35,7 @@ class TrainingArgs:
     max_length: int = 160
 
     apply_data_augment: bool = True
+    lambd: float = 0.9
 
     # tx_args
     lr: float = 1e-4
@@ -83,6 +84,7 @@ def main(args, logger):
         args.base_model_id,
         num_browse_nodes=len(browse_node_vocab),
         # num_brands=len(brand_vocab),
+        lambd=args.lambd,
     )
 
     num_train_steps = (len(data["train"]) // args.batch_size) * args.max_epochs
