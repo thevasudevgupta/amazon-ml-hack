@@ -21,8 +21,8 @@ class ClassifierModule(FlaxBertModule):
     def __call__(self, *args, **kwargs):
         cls_logits = super().__call__(*args, **kwargs)[1]
 
-        mix_rng = self.make_rng("dropout")
         if self.lambd < 1:
+            mix_rng = self.make_rng("dropout")
             cls_logits = self.lambd * cls_logits + (1 - self.lambd) * jax.random.permutation(mix_rng, cls_logits)
         browse_node_logits = self.cls1(cls_logits)
         if self.lambd < 1:
