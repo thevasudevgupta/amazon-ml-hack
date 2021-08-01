@@ -9,7 +9,7 @@ import json
 
 from nltk.corpus import wordnet, stopwords
 
-STOP_WORDS = stop_words = set(stopwords.words('english'))
+STOP_WORDS = set(stopwords.words('english'))
 
 @dataclass
 class DataCollator:
@@ -32,14 +32,12 @@ class DataCollator:
             "input_ids": inputs["input_ids"],
             "attention_mask": inputs["attention_mask"],
             "browse_nodes": jnp.array(features["BROWSE_NODE_ID"], dtype=jnp.int32),
-            # "brands": jnp.array(features["BRAND"], dtype=jnp.int32),
         }
 
 
 def batchify(dataset, batch_size, seed=None):
     if seed is not None:
         dataset = dataset.shuffle(seed=seed)
-    # extra samples will be dropped
     for i in range(len(dataset) // batch_size):
         batch = dataset[i * batch_size : (i + 1) * batch_size]
         yield dict(batch)

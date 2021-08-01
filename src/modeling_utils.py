@@ -10,7 +10,6 @@ import flax.linen as nn
 class ClassifierModule(FlaxBertModule):
     num_browse_nodes: int = None
     num_brands: Optional[int] = None
-    lambd: float = 1.0
 
     def setup(self):
         super().setup()
@@ -20,14 +19,7 @@ class ClassifierModule(FlaxBertModule):
 
     def __call__(self, *args, **kwargs):
         cls_logits = super().__call__(*args, **kwargs)[1]
-
-        if self.lambd < 1:
-            mix_rng = self.make_rng("dropout")
-            cls_logits = self.lambd * cls_logits + (1 - self.lambd) * jax.random.permutation(mix_rng, cls_logits)
         browse_node_logits = self.cls1(cls_logits)
-        if self.lambd < 1:
-            browse_node_logits = self.lambd * browse_node_logits + (1 - self.lambd) * jax.random.permutation(mix_rng, browse_node_logits)
-
         brand_logits = self.cls2(cls_logits) if self.num_brands is not None else None
         return browse_node_logits, brand_logits
 

@@ -16,7 +16,6 @@ from flax.serialization import from_bytes, to_bytes
 from flax.training import train_state
 from flax.training.common_utils import shard
 
-from data_utils import get_noisy_sent
 
 def cross_entropy(logits, labels, ignore_idx=-100):
     """
@@ -94,7 +93,6 @@ class Trainer:
     train_step_fn: Callable
     val_step_fn: Callable
     loss_fn: Callable
-    prediction_fn: Callable
 
     model_save_fn: Callable
     logger: wandb
@@ -162,16 +160,11 @@ class Trainer:
                     lr = self.scheduler_fn(state_step - 1)
 
                     eval_loss = self.evaluate(state, val_dataset)
-
-#                    samples = val_dataset.map(self.prediction_fn)
-#                    accuracy = np.mean(samples["IS_CORRECT"])
-
                     logging_dict = dict(
                         step=state_step.item(),
                         eval_loss=eval_loss.item(),
                         tr_loss=tr_loss,
                         lr=lr.item(),
-#                        val_accuracy=accuracy,
                     )
                     tqdm.write(str(logging_dict))
                     self.logger.log(logging_dict, commit=True)
@@ -252,17 +245,3 @@ def build_tx(lr, init_lr, warmup_steps, num_train_steps, weight_decay):
         learning_rate=lr, weight_decay=weight_decay, mask=weight_decay_mask
     )
     return tx, lr
-
-
-def predict(inputs, forward_fn, to_browse_node, tokenizer, max_length=256):
-    outputs = tokenizer(inputs["inputs"], return_tensors="jax", max_length=max_length, truncation=True, padding="max_length")
-    logits = forward_fn(outputs["input_ids"], outputs["attention_mask"])
-    category = jnp.argmax(logits[0], axis=-1).item()
-
-    assert category < len(to_browse_node) and inputs["BROWSE_NODE_ID"] < len(to_browse_node)
-
-    if "BROWSE_NODE_ID" in inputs:
-        inputs["IS_CORRECT"] = int(category == inputs["BROWSE_NODE_ID"])
-
-    inputs["PREDICTION"] = int(to_browse_node[category])
-    return inputs

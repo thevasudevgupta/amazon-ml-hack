@@ -22,7 +22,7 @@ from modeling_utils import Classifier
 from data_utils import build_or_load_vocab, preprocess
 
 # pass path to test data here
-DATA_FILES = "test-v2.csv"
+DATA_FILES = "../dataset/test-v2.csv"
 
 MODEL_ID = "vasudevgupta/amazon-ml-hack-best"
 TOKENIZER_ID = "bert-base-uncased"

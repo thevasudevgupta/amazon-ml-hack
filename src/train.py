@@ -16,7 +16,6 @@ from training_utils import (
     cls_loss_fn,
     train_step,
     val_step,
-    predict,
 )
 
 IGNORE_IDX = -100
@@ -35,11 +34,10 @@ class TrainingArgs:
     max_length: int = 256
 
     apply_data_augment: bool = False
-    lambd: float = 1
 
     # tx_args
-    lr: float = 6e-5
-    init_lr: float = 0.0
+    lr: float = 1e-5
+    init_lr: float = 1e-5
     warmup_steps: int = 5640
     weight_decay: float = 0.001
 
@@ -59,9 +57,6 @@ def main(args, logger):
 
     browse_node_vocab = build_or_load_vocab(data, column_name="BROWSE_NODE_ID")
     brand_vocab = build_or_load_vocab(data, column_name="BRAND")
-    print("VOCAB SIZE: ", len(browse_node_vocab), len(brand_vocab))
-
-    # data = data.select(range(300000))
 
     tokenizer = AutoTokenizer.from_pretrained(args.base_model_id)
 
@@ -80,24 +75,11 @@ def main(args, logger):
     print(data)
 
     data_collator = DataCollator(tokenizer=tokenizer, max_length=args.max_length)
-    model = Classifier.from_pretrained(
-        args.base_model_id,
-        num_browse_nodes=len(browse_node_vocab),
-        # num_brands=len(brand_vocab),
-        lambd=args.lambd,
-    )
+    model = Classifier.from_pretrained(args.base_model_id, num_browse_nodes=len(browse_node_vocab))
 
     num_train_steps = (len(data["train"]) // args.batch_size) * args.max_epochs
     tx, scheduler = build_tx(
         args.lr, args.init_lr, args.warmup_steps, num_train_steps, args.weight_decay
-    )
-
-    prediction_fn = lambda inputs: predict(
-        inputs,
-        forward_fn=jax.jit(model),
-        to_browse_node={v: k for k, v in browse_node_vocab.items()},
-        tokenizer=tokenizer,
-        max_length=args.max_length,
     )
 
     trainer = Trainer(
@@ -106,7 +88,6 @@ def main(args, logger):
         batchify=batchify,
         train_step_fn=train_step,
         val_step_fn=val_step,
-        prediction_fn=prediction_fn,
         loss_fn=partial(cls_loss_fn, ignore_idx=IGNORE_IDX),
         model_save_fn=model.save_pretrained,
         logger=logger,

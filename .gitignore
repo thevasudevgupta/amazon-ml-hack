@@ -3,3 +3,5 @@ __pycache__/
 final-weights/
 dataset/
 wandb/
+.ipynb_checkpoints/
+*.csv
