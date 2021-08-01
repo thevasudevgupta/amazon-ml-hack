@@ -23,7 +23,7 @@ IGNORE_IDX = -100
 
 @dataclass
 class TrainingArgs:
-    base_model_id: str = "bert-large-uncased"
+    base_model_id: str = "bert-base-uncased"
     logging_steps: int = 564
     save_steps: int = 1880
 
@@ -34,7 +34,7 @@ class TrainingArgs:
     val_split: float = 0.005
     max_length: int = 160
 
-    apply_data_augment: bool = True
+    apply_data_augment: bool = False
     lambd: float = 0.9
 
     # tx_args
@@ -61,7 +61,7 @@ def main(args, logger):
     brand_vocab = build_or_load_vocab(data, column_name="BRAND")
     print("VOCAB SIZE: ", len(browse_node_vocab), len(brand_vocab))
 
-    # data = data.select(range(100))
+    data = data.select(range(300000))
 
     tokenizer = AutoTokenizer.from_pretrained(args.base_model_id)
 
@@ -134,5 +134,6 @@ if __name__ == "__main__":
 
     logger = wandb.init(project="amazon-ml-hack", config=asdict(args))
     args = replace(args, **dict(wandb.config))
+    print(args)
 
     main(args, logger)

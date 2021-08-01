@@ -1,0 +1,18 @@
+command: 
+        - python3
+        - train.py
+method: random
+parameters:
+        lr:
+                values: [1e-4, 7e-5, 2e-4]
+        warmup_steps:
+                values: [5000, 10000, 15000, 2500]
+        weight_decay:
+                distribution: normal
+                mu: 1e-3
+                sigma: 2e-2
+        val_split: 
+                values: [0.05]
+metric:
+        name: eval_loss
+        goal: minimize
