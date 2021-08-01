@@ -57,7 +57,7 @@ def _mapping_fn(sample, sep_token):
         sample["DESCRIPTION"] = ""
     if sample["TITLE"] is None:
         sample["TITLE"] = ""
-    desc = sample["BULLET_POINTS"] or sample["DESCRIPTION"]
+    desc = sample["BULLET_POINTS"] + f" {sep_token} " + sample["DESCRIPTION"]
     sample["inputs"] = sample["TITLE"] + f" {sep_token} " + desc
     return sample
 

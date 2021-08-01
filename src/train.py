@@ -27,18 +27,18 @@ class TrainingArgs:
     logging_steps: int = 564
     save_steps: int = 1880
 
-    batch_size_per_device: int = 32
+    batch_size_per_device: int = 16
     max_epochs: int = 5
 
     seed: int = 42
     val_split: float = 0.005
-    max_length: int = 160
+    max_length: int = 256
 
     apply_data_augment: bool = False
     lambd: float = 1
 
     # tx_args
-    lr: float = 2e-4
+    lr: float = 6e-5
     init_lr: float = 0.0
     warmup_steps: int = 5640
     weight_decay: float = 0.001
